@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Árbol Genealógico — Quiroga Pérez</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f4ef;
+    --text: #1a1a1a;
+    --muted: #666;
+    --light: #999;
+    --quiroga: #7a2020;
+    --quiroga-bg: #fdf0f0;
+    --quiroga-border: #c08080;
+    --perez: #1a3f6f;
+    --perez-bg: #f0f4fd;
+    --perez-border: #80a0c8;
+    --manuela: #1a4f1a;
+    --manuela-bg: #f0f8f0;
+    --manuela-border: #80b880;
+    --line: #bbb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Source Sans 3', sans-serif;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .page-header {
+    padding: 28px 40px 18px;
+    border-bottom: 2px solid #333;
+  }
+
+  .page-header h1 {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .page-header .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 0.73rem;
+    color: var(--muted);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  .legend-swatch {
+    width: 11px; height: 11px;
+    border-radius: 2px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+
+  .tree-wrapper {
+    overflow-x: auto;
+    padding: 28px 40px 40px;
+  }
+
+  .tree { min-width: 2200px; }
+
+  .gen-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--light);
+    margin-bottom: 8px;
+    border-left: 3px solid #ccc;
+    padding-left: 8px;
+  }
+
+  .gen-section { margin-bottom: 0; }
+
+  /* card */
+  .card {
+    border: 1px solid;
+    border-radius: 3px;
+    padding: 7px 9px;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .card.quiroga { background: var(--quiroga-bg); border-color: var(--quiroga-border); }
+  .card.perez   { background: var(--perez-bg);   border-color: var(--perez-border); }
+  .card.manuela { background: var(--manuela-bg); border-color: var(--manuela-border); border-width: 2px; }
+  .card.deceased { opacity: 0.65; }
+
+  .cn { /* card name */
+    font-family: 'EB Garamond', serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 1px;
+  }
+  .card.quiroga .cn { color: var(--quiroga); }
+  .card.perez   .cn { color: var(--perez); }
+  .card.manuela .cn { color: var(--manuela); }
+
+  .cy { font-size: 0.65rem; color: var(--muted); font-style: italic; margin-bottom: 4px; }
+
+  .cdiv { height: 1px; background: var(--line); margin: 3px -9px 4px; opacity: 0.5; }
+
+  .cr { font-size: 0.65rem; color: #333; line-height: 1.5; }
+
+  .cnote { font-size: 0.6rem; color: var(--muted); margin-top: 3px; font-style: italic; line-height: 1.4; }
+
+  .dagger { color: var(--muted); }
+
+  /* marriage connector */
+  .mline {
+    width: 20px; height: 1px;
+    background: #555;
+    margin-top: 24px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .mline::after {
+    content: '';
+    position: absolute;
+    top: -3px; left: 50%;
+    transform: translateX(-50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #555;
+  }
+
+  /* vertical line */
+  .vl { width: 1px; background: var(--line); }
+
+  /* group label */
+  .glabel {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--light);
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
+  /* flex helpers */
+  .row { display: flex; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; align-items: center; }
+
+  /* footnote table */
+  .footnotes {
+    margin: 24px 40px 40px;
+    padding: 14px 18px;
+    border-top: 1px solid #ccc;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .footnotes h3 {
+    font-family: 'EB Garamond', serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  table.st {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+  }
+  table.st th {
+    font-weight: 600;
+    text-align: left;
+    padding: 4px 10px;
+    background: #e8e4dc;
+    border-bottom: 1px solid #ccc;
+  }
+  table.st td {
+    padding: 4px 10px;
+    border-bottom: 1px solid #e4e0d8;
+    vertical-align: top;
+    line-height: 1.55;
+  }
+  table.st tr:last-child td { border-bottom: none; }
+  .qc { color: var(--quiroga); }
+  .pc { color: var(--perez); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Árbol Genealógico — Familia Quiroga Carrasco &amp; Pérez Vanegas</h1>
+  <div class="meta">Historia económica intergeneracional · Bogotá, Colombia — Madrid, España · Entrevistas 2024</div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:var(--quiroga-bg);border-color:var(--quiroga-border);"></div>
+      Línea Quiroga (padre de Manuela)
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:var(--perez-bg);border-color:var(--perez-border);"></div>
+      Línea Pérez Vanegas (madre de Manuela)
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:var(--manuela-bg);border-color:var(--manuela-border);border-width:2px;"></div>
+      Manuela Quiroga (sujeto de referencia)
+    </div>
+    <div class="legend-item"><span style="font-size:10px;">†</span> Fallecido/a</div>
+  </div>
+</header>
+
+<div class="tree-wrapper">
+<div class="tree">
+
+<!-- ─────────────────────────────────────────
+     GEN I — ABUELOS DE LOS PADRES
+───────────────────────────────────────── -->
+<div class="gen-label">Generación I — Abuelos de Rafael, Marta, William y Elisabeth (n. aprox. 1870–1915)</div>
+
+<div class="row" style="justify-content:space-around; gap:8px; margin-bottom:0;">
+
+  <!-- Abuelos paternos de Rafael -->
+  <div class="col">
+    <div class="glabel">Abuelos paternos de Rafael (línea Quiroga)</div>
+    <div class="row">
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Antonio Gómez</div>
+        <div class="cy"><span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Militar</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Otilia Quiroga</div>
+        <div class="cy"><span class="dagger">†</span> 1944</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos maternos de Rafael -->
+  <div class="col">
+    <div class="glabel">Abuelos maternos de Rafael (línea Díaz Palacios)</div>
+    <div class="row">
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Guillermo Díaz</div>
+        <div class="cy"><span class="dagger">†</span> 1937</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ganadero</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Francisca Palacios</div>
+        <div class="cy"><span class="dagger">†</span> 1938</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos maternos de Marta -->
+  <div class="col">
+    <div class="glabel">Abuelos maternos de Marta (línea De la Torre)</div>
+    <div class="row">
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Antonio de la Torre</div>
+        <div class="cy">n. ~1900</div>
+        <div class="cdiv"></div>
+        <div class="cr">Vendedor de seguros</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Lucila Díaz</div>
+        <div class="cy">n. ~1902</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos paternos de William -->
+  <div class="col">
+    <div class="glabel">Abuelos paternos de William (línea Abella-Pérez)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Ramón Abella</div>
+        <div class="cy">n. 1902 <span class="dagger">†</span> 2006</div>
+        <div class="cdiv"></div>
+        <div class="cr">Conductor<br>Políticos importantes<br>Cundinamarca</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Rosalbina Pérez<br>Zambrano</div>
+        <div class="cy">n. 11 nov. 1906 <span class="dagger">†</span> 1992</div>
+        <div class="cdiv"></div>
+        <div class="cr">Campesina<br>Cundinamarca</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos paternos de Elisabeth -->
+  <div class="col">
+    <div class="glabel">Abuelos paternos de Elisabeth (línea Vanegas)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Daniel Vanegas</div>
+        <div class="cy"><span class="dagger">†</span> ~1970</div>
+        <div class="cdiv"></div>
+        <div class="cr">Agricultor · Finca<br>Cundinamarca</div>
+        <div class="cnote">Encontró guaca de oro ~1940. Base del patrimonio.</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Isabel Ramírez</div>
+        <div class="cy"><span class="dagger">†</span> ~1970</div>
+        <div class="cdiv"></div>
+        <div class="cr">Vendía comida</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos maternos de Elisabeth -->
+  <div class="col">
+    <div class="glabel">Abuelos maternos de Elisabeth (línea Téllez)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Desconocido</div>
+        <div class="cy">—</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Rosa Téllez</div>
+        <div class="cy">n. 11 nov. 1911 <span class="dagger">†</span> 1 may. 1995</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connectors I→II -->
+<div class="row" style="justify-content:space-around; gap:8px;">
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+</div>
+
+<!-- ─────────────────────────────────────────
+     GEN II — ABUELOS DE JAVIER Y ÁNGELA
+───────────────────────────────────────── -->
+<div class="gen-label">Generación II — Abuelos de Javier y Ángela (n. aprox. 1914–1940)</div>
+
+<div class="row" style="justify-content:space-around; gap:8px; margin-bottom:0;">
+
+  <!-- Abuelos paternos de Javier (padres de Rafael Quiroga) -->
+  <div class="col">
+    <div class="glabel">Abuelos paternos de Javier (padres de Rafael)</div>
+    <div class="row">
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Alfonso Quiroga<br>Gómez</div>
+        <div class="cy">n. 30 nov. 1914 <span class="dagger">†</span> 14 oct. 1980</div>
+        <div class="cdiv"></div>
+        <div class="cr">Contador · Empresa pública<br>Joyería propia<br>(destruida, Bogotazo 1948)</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Belén Díaz Palacios</div>
+        <div class="cy">n. 29 jun. 1921 <span class="dagger">†</span> 22 mar. 2014</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Venta empanadas<br>Alquiler habitaciones</div>
+        <div class="cnote">Casa grande en Bogotá, construida ~1940.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos maternos de Javier (padres de Marta Carrasco) -->
+  <div class="col">
+    <div class="glabel">Abuelos maternos de Javier (padres de Marta)</div>
+    <div class="row">
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Álvaro Luis Carrasco</div>
+        <div class="cy">n. 1928 <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Contador</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card quiroga deceased" style="width:145px;">
+        <div class="cn">Clara Virginia<br>de la Torre</div>
+        <div class="cy">n. 1930 <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Secretaria</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos de Ángela: paternos (padres de William) izquierda, maternos (padres de Elisabeth) derecha -->
+  <div class="col" style="gap:8px;">
+    <div class="glabel">Abuelos de Ángela</div>
+    <div class="row" style="gap:16px; align-items:flex-start;">
+      <!-- Paternos (padres de William) -->
+      <div class="col" style="gap:2px;">
+        <div style="font-size:0.58rem; text-transform:uppercase; letter-spacing:1px; color:var(--light); margin-bottom:3px;">Paternos (padres de William)</div>
+        <div class="row">
+          <div class="card perez" style="width:138px;">
+            <div class="cn">Antonio María Pérez</div>
+            <div class="cy">n. ~1938 · ~85-88 años</div>
+            <div class="cdiv"></div>
+            <div class="cr">Conductor<br>Grandes empresas</div>
+            <div class="cnote">Tuvo casa; la perdió por malos negocios.</div>
+          </div>
+          <div class="mline"></div>
+          <div class="card perez" style="width:138px;">
+            <div class="cn">Carlina Corredor<br>de Pérez</div>
+            <div class="cy">n. ~1938 · ~85-88 años</div>
+            <div class="cdiv"></div>
+            <div class="cr">Ama de casa · 7 hijos<br>Venta empanadas<br>y almuerzos</div>
+          </div>
+        </div>
+      </div>
+      <!-- Maternos (padres de Elisabeth) -->
+      <div class="col" style="gap:2px;">
+        <div style="font-size:0.58rem; text-transform:uppercase; letter-spacing:1px; color:var(--light); margin-bottom:3px;">Maternos (padres de Elisabeth)</div>
+        <div class="row">
+          <div class="card perez deceased" style="width:138px;">
+            <div class="cn">Carlos Virgilio<br>Vanegas Ramírez</div>
+            <div class="cy">n. 1935 <span class="dagger">†</span> 19 mar. 2009</div>
+            <div class="cdiv"></div>
+            <div class="cr">Ganadero · Agricultor</div>
+          </div>
+          <div class="mline"></div>
+          <div class="card perez deceased" style="width:138px;">
+            <div class="cn">Anatilia Téllez<br>de Vanegas</div>
+            <div class="cy">n. 22 ago. 1935 <span class="dagger">†</span> 17 ene. 2017</div>
+            <div class="cdiv"></div>
+            <div class="cr">Ama de casa<br>Heredó propiedades</div>
+            <div class="cnote">Herencia de bisabuelos (guaca) → casas y fincas.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connectors II→III -->
+<div class="row" style="justify-content:space-around; gap:8px;">
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+</div>
+
+<!-- ─────────────────────────────────────────
+     GEN III — PADRES + TÍOS + HERMANOS
+───────────────────────────────────────── -->
+<div class="gen-label">Generación III — Padres de Javier y Ángela, y sus hermanos (n. aprox. 1946–1985)</div>
+
+<div class="row" style="justify-content:space-around; gap:16px; align-items:flex-start; margin-bottom:0;">
+
+  <!-- Bloque izquierdo: Rafael (izq) — Marta (der), cada uno con sus hermanos debajo, hijos en centro -->
+  <div class="col" style="flex:1; gap:0;">
+
+    <div class="glabel">Padres de Javier</div>
+    <div class="row" style="justify-content:center; gap:0;">
+
+      <!-- Rafael Quiroga + sus hermanos debajo -->
+      <div class="col" style="gap:0; align-items:center;">
+        <div class="card quiroga deceased" style="width:145px;">
+          <div class="cn">Rafael Quiroga</div>
+          <div class="cy">n. 1943 <span class="dagger">†</span> 2007</div>
+          <div class="cdiv"></div>
+          <div class="cr">Auxiliar administrativo<br>Área contable<br>Sin título profesional<br>Periodos de desempleo</div>
+        </div>
+        <div style="height:16px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:16px;"></div></div>
+        <div class="col" style="gap:4px; align-items:center;">
+          <div class="glabel">Hermanos de Rafael</div>
+          <div class="col" style="gap:5px;">
+            <div class="card quiroga deceased" style="width:130px;">
+              <div class="cn">Guillermo Quiroga<br>Díaz</div>
+              <div class="cy">n. 1948 <span class="dagger">†</span> 1998</div>
+              <div class="cdiv"></div>
+              <div class="cr">Discapacidad<br>Sin actividad laboral</div>
+            </div>
+            <div class="card quiroga" style="width:130px;">
+              <div class="cn">Alba Lucía Quiroga</div>
+              <div class="cy">n. ~1950</div>
+              <div class="cdiv"></div>
+              <div class="cr">Profesora<br>Historia y C. Sociales<br>Maestría · Pensionada</div>
+            </div>
+            <div class="card quiroga deceased" style="width:130px;">
+              <div class="cn">Aldo Antonio<br>Quiroga</div>
+              <div class="cy">n. 1945 <span class="dagger">†</span> 2001</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empresa del Gobierno<br>Líder sindical</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Línea de matrimonio -->
+      <div class="mline" style="margin-top:28px;"></div>
+
+      <!-- Marta Carrasco + sus hermanos debajo -->
+      <div class="col" style="gap:0; align-items:center;">
+        <div class="card quiroga" style="width:145px;">
+          <div class="cn">Marta Carrasco</div>
+          <div class="cy">n. 1956</div>
+          <div class="cdiv"></div>
+          <div class="cr">Auxiliar de enfermería<br>Trabajó toda su vida<br>No convivió con Javier</div>
+        </div>
+        <div style="height:16px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:16px;"></div></div>
+        <div class="col" style="gap:4px; align-items:center;">
+          <div class="glabel">Hermanos de Marta</div>
+          <div class="col" style="gap:5px;">
+            <div class="card quiroga deceased" style="width:130px;">
+              <div class="cn">Néstor Jaime<br>Carrasco</div>
+              <div class="cy">n. 1948</div>
+              <div class="cdiv"></div>
+              <div class="cr">—</div>
+            </div>
+            <div class="card quiroga deceased" style="width:130px;">
+              <div class="cn">María Mercedes<br>Carrasco</div>
+              <div class="cy">n. 1950</div>
+              <div class="cdiv"></div>
+              <div class="cr">—</div>
+            </div>
+            <div class="card quiroga deceased" style="width:130px;">
+              <div class="cn">Clara Lucía<br>Carrasco</div>
+              <div class="cy">n. 1953</div>
+              <div class="cdiv"></div>
+              <div class="cr">—</div>
+            </div>
+            <div class="card quiroga" style="width:130px;">
+              <div class="cn">Alfonso Carrasco</div>
+              <div class="cy">n. 1956</div>
+              <div class="cdiv"></div>
+              <div class="cr">—</div>
+            </div>
+            <div class="card quiroga" style="width:130px;">
+              <div class="cn">Luis Enrique<br>Carrasco</div>
+              <div class="cy">n. 1960</div>
+              <div class="cdiv"></div>
+              <div class="cr">Escritor</div>
+            </div>
+            <div class="card quiroga" style="width:130px;">
+              <div class="cn">José Ignacio<br>Carrasco</div>
+              <div class="cy">n. 1960</div>
+              <div class="cdiv"></div>
+              <div class="cr">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Hijos de Rafael y Marta (centrados debajo) -->
+    <div style="height:20px; display:flex; justify-content:center;"><div class="vl" style="height:20px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hijos de Rafael y Marta</div>
+      <div class="row" style="gap:6px;">
+        <div class="card quiroga" style="width:130px;">
+          <div class="cn">Sandra Quiroga</div>
+          <div class="cy">n. 1975</div>
+          <div class="cdiv"></div>
+          <div class="cr">Contadora<br>Seguridad Social<br>Sevilla (~2004)<br>País Vasco (2025)</div>
+        </div>
+        <div class="card quiroga" style="width:130px;">
+          <div class="cn">Javier Quiroga</div>
+          <div class="cy">n. 1980</div>
+          <div class="cdiv"></div>
+          <div class="cr">→ ver Generación IV</div>
+        </div>
+        <div class="card quiroga" style="width:130px;">
+          <div class="cn">Alejandro Quiroga</div>
+          <div class="cy">n. 1977</div>
+          <div class="cdiv"></div>
+          <div class="cr">Programador<br>BBVA · España</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bloque derecho: William (izq) — Elisabeth (der), cada uno con sus hermanos debajo, hijos en centro -->
+  <div class="col" style="flex:1; gap:0;">
+
+    <!-- Fila superior: William a la izquierda, Elisabeth a la derecha -->
+    <div class="glabel">Padres de Ángela</div>
+    <div class="row" style="justify-content:center; gap:0;">
+
+      <!-- William Pérez + sus hermanos debajo -->
+      <div class="col" style="gap:0; align-items:center;">
+        <div class="card perez" style="width:145px;">
+          <div class="cn">William Pérez</div>
+          <div class="cy">n. 1962</div>
+          <div class="cdiv"></div>
+          <div class="cr">Vendedor en empresas<br>Bachillerato<br>Toda su vida en ventas<br>Pensionado</div>
+        </div>
+        <div style="height:16px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:16px;"></div></div>
+        <div class="col" style="gap:4px; align-items:center;">
+          <div class="glabel">Hermanos de William</div>
+          <div class="col" style="gap:5px;">
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Manuel Pérez</div>
+              <div class="cdiv"></div>
+              <div class="cr">Conductor</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Graciela Pérez</div>
+              <div class="cdiv"></div>
+              <div class="cr">Ama de casa</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Nubia Pérez</div>
+              <div class="cdiv"></div>
+              <div class="cr">Congreso de la<br>República de Colombia</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Liliana Pérez</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empresa pública</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Rosalbina Pérez</div>
+              <div class="cdiv"></div>
+              <div class="cr">Ama de casa</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Carolina Pérez</div>
+              <div class="cdiv"></div>
+              <div class="cr">Gerente<br>Empresa propia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Línea de matrimonio -->
+      <div class="mline" style="margin-top:28px;"></div>
+
+      <!-- Elisabeth Vanegas + sus hermanos debajo -->
+      <div class="col" style="gap:0; align-items:center;">
+        <div class="card perez" style="width:145px;">
+          <div class="cn">Elisabeth Vanegas</div>
+          <div class="cy">n. 1967</div>
+          <div class="cdiv"></div>
+          <div class="cr">Ventas de calzado<br>Mesera → Bar<br>Club de Abogados<br>5.° de primaria<br>Pensionada</div>
+          <div class="cnote">Heredó casa de la abuela materna.</div>
+        </div>
+        <div style="height:16px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:16px;"></div></div>
+        <div class="col" style="gap:4px; align-items:center;">
+          <div class="glabel">Hermanos de Elisabeth</div>
+          <div class="col" style="gap:5px;">
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Miriam Téllez</div>
+              <div class="cy">n. 21 may. 1952</div>
+              <div class="cdiv"></div>
+              <div class="cr">Ama de casa</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Aracely Téllez</div>
+              <div class="cy">n. 29 sept. 1947</div>
+              <div class="cdiv"></div>
+              <div class="cr">Abogada</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Olinda Téllez</div>
+              <div class="cy">n. 31 may. 1960</div>
+              <div class="cdiv"></div>
+              <div class="cr">Profesora<br>Lic. Historia y<br>Ciencias Sociales</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Gonzalo Vanegas</div>
+              <div class="cy">n. 29 sept. 1961</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empresario</div>
+            </div>
+            <div class="card perez deceased" style="width:130px;">
+              <div class="cn">Gustavo Vanegas</div>
+              <div class="cy">n. nov. 1961 <span class="dagger">†</span> 10 abr. 2019</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empresario</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Otilia Vanegas</div>
+              <div class="cy">n. nov. 1964</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empleada</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Carlos Vanegas</div>
+              <div class="cy">n. abr. 1966</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empresario</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Carmenza Vanegas</div>
+              <div class="cy">n. 22 sept. 1968</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empleada<br>Técnico en Finanzas</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Esmeralda Vanegas</div>
+              <div class="cy">n. 12 mar. 1969</div>
+              <div class="cdiv"></div>
+              <div class="cr">Empleada · Aduanas<br>Bachillerato</div>
+            </div>
+            <div class="card perez" style="width:130px;">
+              <div class="cn">Luz Helena Vanegas</div>
+              <div class="cy">n. 13 jun. 1970</div>
+              <div class="cdiv"></div>
+              <div class="cr">Ama de casa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Hijos de William y Elisabeth (debajo de la pareja, centrados) -->
+    <div style="height:20px; display:flex; justify-content:center;"><div class="vl" style="height:20px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hijos de William y Elisabeth</div>
+      <div class="row" style="gap:6px;">
+        <div class="card perez" style="width:130px;">
+          <div class="cn">Camilo Pérez</div>
+          <div class="cy">n. ~1985</div>
+          <div class="cdiv"></div>
+          <div class="cr">Sin carrera universitaria</div>
+        </div>
+        <div class="card perez" style="width:130px;">
+          <div class="cn">Ángela Pérez</div>
+          <div class="cy">n. 1984</div>
+          <div class="cdiv"></div>
+          <div class="cr">→ ver Generación IV</div>
+        </div>
+        <div class="card perez" style="width:130px;">
+          <div class="cn">Viviana Pérez</div>
+          <div class="cy">n. 1994</div>
+          <div class="cdiv"></div>
+          <div class="cr">Universidad privada</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- connector III→IV -->
+<div class="col" style="margin:12px 0;"><div class="vl" style="height:40px;"></div></div>
+
+<!-- ─────────────────────────────────────────
+     GEN IV — JAVIER Y ÁNGELA
+───────────────────────────────────────── -->
+<div class="gen-label">Generación IV — Javier Quiroga y Ángela Pérez (n. 1980–1984)</div>
+
+<div class="row" style="justify-content:center; gap:0;">
+  <div class="card quiroga" style="width:195px;">
+    <div class="cn" style="font-size:0.9rem;">Javier Mauricio<br>Quiroga Carrasco</div>
+    <div class="cy">n. 1980 · Bogotá, Colombia</div>
+    <div class="cdiv"></div>
+    <div class="cr">Ingeniero Mecánico<br>Universidad colombiana<br>Sector automotriz y asegurador<br>Empresa propia (con Ángela)<br>Madrid desde 2024</div>
+    <div class="cnote">Origen estrato 1-2. 2 pisos propios en Bogotá.</div>
+  </div>
+
+  <div class="col" style="padding-top:23px; gap:2px;">
+    <div style="width:44px; height:1px; background:#555;"></div>
+    <div style="font-size:0.58rem; color:var(--muted); white-space:nowrap; text-align:center; margin-top:2px;">casados ~2005</div>
+  </div>
+
+  <div class="card perez" style="width:195px;">
+    <div class="cn" style="font-size:0.9rem;">Ángela Patricia<br>Pérez Vanegas</div>
+    <div class="cy">n. 1984 · Bogotá, Colombia</div>
+    <div class="cdiv"></div>
+    <div class="cr">Tecnóloga Delineante<br>Arquitectura e Ingeniería<br>Empleada 2006–2021<br>Empresa propia desde 2021<br>Madrid desde 2024</div>
+    <div class="cnote">Universidad pública, graduada 2004.</div>
+  </div>
+</div>
+
+<!-- connector IV→V -->
+<div class="col" style="margin:8px 0;"><div class="vl" style="height:36px;"></div></div>
+
+<!-- ─────────────────────────────────────────
+     GEN V — MANUELA
+───────────────────────────────────────── -->
+<div class="gen-label">Generación V — Manuela Quiroga Pérez (n. 2006)</div>
+
+<div class="row" style="justify-content:center;">
+  <div class="card manuela" style="width:210px;">
+    <div class="cn" style="font-size:0.95rem;">Manuela Quiroga Pérez</div>
+    <div class="cy">n. 2006 · Bogotá, Colombia</div>
+    <div class="cdiv"></div>
+    <div class="cr">Estudiante universitaria<br>Universidad Complutense de Madrid<br>Colabora en empresa familiar</div>
+    <div class="cnote">Hija única. Colegio privado bilingüe en Bogotá. Madrid desde 2024.</div>
+  </div>
+</div>
+
+</div><!-- end tree -->
+</div><!-- end tree-wrapper -->
+
+<!-- NOTAS -->
+<div class="footnotes">
+  <h3>Notas histórico-económicas</h3>
+  <table class="st">
+    <thead>
+      <tr>
+        <th style="width:130px;">Generación</th>
+        <th class="qc">Línea Quiroga</th>
+        <th class="pc">Línea Pérez Vanegas</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Gen. I — Abuelos de los padres (~1870–1915)</td>
+        <td>Abuelos paternos de Rafael: Antonio Gómez (militar) y Otilia Quiroga († 1944, ama de casa). Abuelos maternos de Rafael: Guillermo Díaz († 1937, ganadero) y Francisca Palacios († 1938, ama de casa). Abuelos maternos de Marta: Antonio de la Torre (~1900, vendedor de seguros) y Lucila Díaz (~1902, ama de casa).</td>
+        <td>Abuelos paternos de William: Ramón Abella (n. 1902, † 2006, conductor de políticos) y Rosalbina Pérez Zambrano (n. 11 nov. 1906, † 1992, campesina). Abuelos paternos de Elisabeth: Daniel Vanegas e Isabel Ramírez (ambos † ~1970; ella vendía comida; guaca de oro ~1940, base del patrimonio). Abuelos maternos de Elisabeth: Rosa Téllez (n. 11 nov. 1911, † 1 may. 1995, ama de casa) y abuelo sin datos conocidos.</td>
+      </tr>
+      <tr>
+        <td>Abuelos (Gen. II)</td>
+        <td>Abuelos paternos de Javier: Alfonso Quiroga Gómez (n. 30 nov. 1914, † 14 oct. 1980; contador, joyería destruida Bogotazo 1948) y Belén Díaz Palacios (n. 29 jun. 1921, † 22 mar. 2014; ama de casa, casa grande en Bogotá). Abuelos maternos de Javier: Álvaro Luis Carrasco (n. 1928, contador) y Clara Virginia de la Torre (n. 1930, secretaria).</td>
+        <td>Abuelos paternos de Ángela (padres de William): Antonio María Pérez y Carlina Corredor de Pérez (ama de casa, 7 hijos; perdieron patrimonio). Abuelos maternos de Ángela (padres de Elisabeth): Carlos Virgilio Vanegas Ramírez (n. 1935, † 19 mar. 2009, ganadero) y Anatilia Téllez de Vanegas (n. 22 ago. 1935, † 17 ene. 2017, ama de casa; heredó propiedades).</td>
+      </tr>
+      <tr>
+        <td>Padres (Gen. III)</td>
+        <td>Rafael Quiroga (n. 1943, † 2007): auxiliar contable. Hermanos: Guillermo Quiroga Díaz (n. 1948, † 1998), Alba Lucía Quiroga (~1950, profesora, pensionada), Aldo Antonio Quiroga (n. 1945, † 2001, líder sindical). Marta Carrasco (n. 1956): auxiliar de enfermería. Hermanos de Marta: Néstor Jaime (1948), María Mercedes (1950), Clara Lucía (1953), Alfonso (1956), Luis Enrique (1960, escritor), José Ignacio (1960). Hijos: Sandra (1975), Alejandro (1977), Javier (1980).</td>
+        <td>William Pérez (n. 1962, pensionado) y Elisabeth Vanegas (n. 1967, pensionada). Hermanos de William: Manuel (conductor), Graciela (ama de casa), Nubia (Congreso), Liliana (empresa pública), Rosalbina (ama de casa), Carolina (gerente). Hermanos de Elisabeth: Miriam Téllez (21 may. 1952), Aracely Téllez (29 sept. 1947, abogada), Olinda Téllez (31 may. 1960, profesora), Gonzalo Vanegas (29 sept. 1961, empresario), Gustavo Vanegas (nov. 1961, † 10 abr. 2019), Otilia (nov. 1964), Carlos (abr. 1966), Carmenza (22 sept. 1968), Esmeralda (12 mar. 1969), Luz Helena (13 jun. 1970). Hijos: Camilo, Ángela (1984), Viviana (1994).</td>
+      </tr>
+      <tr>
+        <td>Gen. IV (1980–1984)</td>
+        <td>Javier: primer profesional universitario de su línea directa. Ingeniero mecánico. 2 pisos en Bogotá. Empresa propia en Madrid.</td>
+        <td>Ángela: tecnóloga delineante, universidad pública (2004). Empleada hasta 2021. Empresa propia desde 2021. Madrid desde 2024.</td>
+      </tr>
+      <tr>
+        <td>Gen. V — Manuela (2006)</td>
+        <td colspan="2">Primera generación con educación privada desde el colegio, formación universitaria en el extranjero (UCM, Madrid) y sin restricciones económicas en el acceso a estudios superiores.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

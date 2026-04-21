@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Árbol Genealógico — Pérez-Velasco / Blanco-Aguado</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f4ef;
+    --text: #1a1a1a;
+    --muted: #666;
+    --light: #999;
+    /* Línea Pérez-Velasco (verde, como en la imagen original) */
+    --perez: #1a5c2a;
+    --perez-bg: #f0f8f1;
+    --perez-border: #7bbf8a;
+    /* Línea Velasco (naranja/amarillo, como en la imagen original) */
+    --velasco: #8a4b00;
+    --velasco-bg: #fdf5e8;
+    --velasco-border: #d4a055;
+    /* Protagonista */
+    --pedro: #1a3f6f;
+    --pedro-bg: #f0f4fd;
+    --pedro-border: #80a0c8;
+    --line: #bbb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Source Sans 3', sans-serif;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .page-header {
+    padding: 28px 40px 18px;
+    border-bottom: 2px solid #333;
+  }
+
+  .page-header h1 {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .page-header .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 0.73rem;
+    color: var(--muted);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  .legend-swatch {
+    width: 11px; height: 11px;
+    border-radius: 2px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+
+  .tree-wrapper {
+    overflow-x: auto;
+    padding: 28px 40px 40px;
+  }
+
+  .tree { min-width: 2400px; }
+
+  .gen-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--light);
+    margin-bottom: 8px;
+    border-left: 3px solid #ccc;
+    padding-left: 8px;
+  }
+
+  .gen-section { margin-bottom: 0; }
+
+  .card {
+    border: 1px solid;
+    border-radius: 3px;
+    padding: 7px 9px;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .card.perez   { background: var(--perez-bg);   border-color: var(--perez-border); }
+  .card.velasco { background: var(--velasco-bg); border-color: var(--velasco-border); }
+  .card.pedro   { background: var(--pedro-bg);   border-color: var(--pedro-border); border-width: 2px; }
+  .card.deceased { opacity: 0.65; }
+
+  .cn {
+    font-family: 'EB Garamond', serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 1px;
+  }
+  .card.perez   .cn { color: var(--perez); }
+  .card.velasco .cn { color: var(--velasco); }
+  .card.pedro   .cn { color: var(--pedro); }
+
+  .cy { font-size: 0.65rem; color: var(--muted); font-style: italic; margin-bottom: 4px; }
+  .cdiv { height: 1px; background: var(--line); margin: 3px -9px 4px; opacity: 0.5; }
+  .cr { font-size: 0.65rem; color: #333; line-height: 1.5; }
+  .cnote { font-size: 0.6rem; color: var(--muted); margin-top: 3px; font-style: italic; line-height: 1.4; }
+  .dagger { color: var(--muted); }
+
+  .mline {
+    width: 20px; height: 1px;
+    background: #555;
+    margin-top: 24px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .mline::after {
+    content: '';
+    position: absolute;
+    top: -3px; left: 50%;
+    transform: translateX(-50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #555;
+  }
+
+  .vl { width: 1px; background: var(--line); }
+
+  .glabel {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--light);
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
+  .row { display: flex; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; align-items: center; }
+
+  .footnotes {
+    margin: 24px 40px 40px;
+    padding: 14px 18px;
+    border-top: 1px solid #ccc;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .footnotes h3 {
+    font-family: 'EB Garamond', serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  table.st {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+  }
+  table.st th {
+    font-weight: 600;
+    text-align: left;
+    padding: 4px 10px;
+    background: #e8e4dc;
+    border-bottom: 1px solid #ccc;
+  }
+  table.st td {
+    padding: 4px 10px;
+    border-bottom: 1px solid #e4e0d8;
+    vertical-align: top;
+    line-height: 1.55;
+  }
+  table.st tr:last-child td { border-bottom: none; }
+  .vc { color: var(--velasco); }
+  .pc { color: var(--perez); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Árbol Genealógico — Familia Pérez-Velasco &amp; Blanco-Aguado</h1>
+  <div class="meta">Historia económica intergeneracional · Granada / Alhama de Granada / Madrid, España · Proyecto Historia Económica II, UCM 2025-2026</div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:var(--perez-bg);border-color:var(--perez-border);"></div>
+      Línea Pérez-Garzón (padre: Pedro Fco. Pérez Jiménez)
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:var(--velasco-bg);border-color:var(--velasco-border);"></div>
+      Línea Velasco-Jiménez (madre: Gema Blanco Aguado)
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:var(--pedro-bg);border-color:var(--pedro-border);border-width:2px;"></div>
+      Pedro Pablo Pérez Velasco (sujeto de referencia)
+    </div>
+    <div class="legend-item"><span style="font-size:10px;">†</span> Fallecido/a</div>
+  </div>
+</header>
+
+<div class="tree-wrapper">
+<div class="tree">
+
+<!-- ─────────────────────────────────────────
+     GEN I — BISABUELOS
+───────────────────────────────────────── -->
+<div class="gen-label">Generación I — Bisabuelos (n. aprox. 1860–1900)</div>
+
+<div class="row" style="justify-content:space-around; gap:8px; margin-bottom:0;">
+
+  <!-- Bisabuelos paternos de Juan Miguel Pérez (línea Pérez Negro) -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Pérez-Benítez (Alhama de Granada)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Pedro Pérez Negro</div>
+        <div class="cy">Alhama de Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Actividad agrícola<br>(Alhama de Granada)</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Francisca Benítez<br>Fernández</div>
+        <div class="cy">Alhama de Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bisabuelos línea Garzón-Fresneda -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Garzón-Pérez (Alhama de Granada)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">José Garzón Fresneda</div>
+        <div class="cy">Alhama de Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Actividad agrícola<br>(Alhama de Granada)</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Francisca Pérez<br>Collados</div>
+        <div class="cy">Alhama de Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bisabuelos línea Pons-González (Itrabo) -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Pons-González (Itrabo, Granada)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">José Pons Díaz</div>
+        <div class="cy">Albeida, Valencia</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos conocidos</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Andrea González</div>
+        <div class="cy">Itrabo, Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bisabuelos línea Fernández-Villanova (Gójar) -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Fernández-Villanova (Gójar, Granada)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Antonio Fernández Gil</div>
+        <div class="cy">Gójar, Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos conocidos</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">María Juana Villanova<br>Jiménez</div>
+        <div class="cy">Gójar, Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bisabuelos línea Velasco (Alhama de Granada) -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Jiménez-Rivera (Motril)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Francisco Jiménez<br>Gálvez</div>
+        <div class="cy">Motril (?)</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos conocidos</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">María de la Luz<br>Rivera Morales</div>
+        <div class="cy">Motril (?)</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bisabuelos línea Pérez Navarro (Vélez-Benaudalla) -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Pérez-Navarro (Vélez-Benaudalla?)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Antonio Pérez Navarro</div>
+        <div class="cy">Vélez-Benaudalla (?)</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos conocidos</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Dolores Rodríguez Ruiz</div>
+        <div class="cy">Vélez-Benaudalla (?)</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bisabuelos Blanco-Aguado: Moisés y madre de Elena -->
+  <div class="col">
+    <div class="glabel">Bisabuelos línea Aguado (Madrid / Ávila)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Moisés Blanco</div>
+        <div class="cy">Madrid</div>
+        <div class="cdiv"></div>
+        <div class="cr">Tipógrafo<br>Madrid</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Rubina Aguado</div>
+        <div class="cy">Ávila</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Ávila → Madrid</div>
+        <div class="cnote">Hija de Juliana, vendedora en el Mercado de Maravillas.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connectors I→II -->
+<div class="row" style="justify-content:space-around; gap:8px;">
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+</div>
+
+<!-- ─────────────────────────────────────────
+     GEN II — ABUELOS DE PEDRO FCO. Y GEMA
+───────────────────────────────────────── -->
+<div class="gen-label">Generación II — Abuelos de Pedro Francisco y Gema (n. aprox. 1889–1915)</div>
+
+<div class="row" style="justify-content:space-around; gap:8px; margin-bottom:0;">
+
+  <!-- Abuelos paternos de Pedro Fco. (padres de Juan Miguel Pérez) -->
+  <div class="col">
+    <div class="glabel">Abuelos paternos de Pedro Fco. — Línea Pérez Benítez</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:150px;">
+        <div class="cn">Juan Miguel Pérez<br>Benítez</div>
+        <div class="cy">Alhama de Granada, 1946 <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Actividad agrícola<br>Alhama de Granada</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:150px;">
+        <div class="cn">Eleuteria Garzón<br>Pérez</div>
+        <div class="cy">Loja, Granada <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Loja → Alhama</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos maternos de Pedro Fco. (padres de Ramona Pérez) -->
+  <div class="col">
+    <div class="glabel">Abuelos maternos de Pedro Fco. — Línea Pons-Fernández</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:150px;">
+        <div class="cn">Andrés Pons<br>Fernández</div>
+        <div class="cy">Itrabo, Granada <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos conocidos<br>Itrabo, Granada</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:150px;">
+        <div class="cn">Encarnación<br>Fernández Villanova</div>
+        <div class="cy">Gójar, Granada <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Gójar, Granada</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos paternos de Gema: padres de Francisco Jiménez Rivera -->
+  <div class="col">
+    <div class="glabel">Abuelos línea Jiménez-Rivera (padres de Francisco Jiménez)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:150px;">
+        <div class="cn">Francisco Jiménez<br>Rivera</div>
+        <div class="cy">Motril, Granada<br>1888 — 1952?</div>
+        <div class="cdiv"></div>
+        <div class="cr">Actividad agrícola /<br>jornalero, Motril</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:150px;">
+        <div class="cn">Ramona Pérez<br>Rodríguez</div>
+        <div class="cy">Vélez de Benaudalla<br>1889 — 1974</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Vélez de Benaudalla</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos línea Velasco Puertas (Salvador Velasco) -->
+  <div class="col">
+    <div class="glabel">Abuelos línea Velasco-Rodríguez (padre de Salvador Velasco)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:150px;">
+        <div class="cn">Justo Velasco<br>Puertas</div>
+        <div class="cy">Alhama de Granada, 1911 <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos<br>Alhama de Granada</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:150px;">
+        <div class="cn">Ana Rodríguez de<br>León Branchard</div>
+        <div class="cy">Valencia — <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos<br>Valencia</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abuelos Blanco-Aguado -->
+  <div class="col">
+    <div class="glabel">Abuelos maternos de Gema — Línea Blanco-Aguado (Madrid)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:150px;">
+        <div class="cn">Moisés Blanco</div>
+        <div class="cy">Madrid <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Tipógrafo<br>Madrid</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:150px;">
+        <div class="cn">Rubina Aguado</div>
+        <div class="cy">Ávila → Madrid <span class="dagger">†</span></div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Ávila → Madrid</div>
+        <div class="cnote">Hija de Juliana (vendedora Mercado de Maravillas, Madrid).</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connectors II→III -->
+<div class="row" style="justify-content:space-around; gap:8px;">
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+  <div class="col" style="flex:1;"><div class="vl" style="height:32px;"></div></div>
+</div>
+
+<!-- ─────────────────────────────────────────
+     GEN III — PADRES DE PEDRO PABLO Y GEMA
+───────────────────────────────────────── -->
+<div class="gen-label">Generación III — Padres de Pedro Pablo y Gema (n. aprox. 1888–1952)</div>
+
+<div class="row" style="justify-content:space-around; gap:8px; margin-bottom:0;">
+
+  <!-- José Pedro Pérez Garzón (abuelo paterno de Pedro Pablo) -->
+  <div class="col">
+    <div class="glabel">Abuelo paterno de Pedro Pablo</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">José Pedro Pérez<br>Garzón</div>
+        <div class="cy">n. 17-4-1889 · Loja<br><span class="dagger">†</span> 10-1949 · Alhama</div>
+        <div class="cdiv"></div>
+        <div class="cr">Actividad agrícola<br>Loja → Alhama de Granada</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Josefina Pons<br>Fernández</div>
+        <div class="cy">n. 9-3-1891 · Bujalance, Córdoba<br><span class="dagger">†</span> 27-10-1982 · Madrid</div>
+        <div class="cdiv"></div>
+        <div class="cr">Ama de casa<br>Bujalance → Alhama → Madrid</div>
+      </div>
+    </div>
+    <div style="height:10px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:10px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hermana</div>
+      <div class="card perez deceased" style="width:140px;">
+        <div class="cn">Carmen Jiménez<br>Pérez</div>
+        <div class="cy">n. Itrabo, Granada, 4-10-1920<br><span class="dagger">†</span> Madrid, 11-6-2019</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación</div>
+      </div>
+    </div>
+    <div style="height:10px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:10px;"></div></div>
+    <div class="glabel">Otro hijo: Laura (Itrabo o Motril, 1916)</div>
+  </div>
+
+  <!-- Línea Velasco Jiménez — Salvador Velasco Rodriguez de León -->
+  <div class="col">
+    <div class="glabel">Padres de Salvador Velasco Rodríguez de León</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Salvador Velasco<br>Rodríguez de León</div>
+        <div class="cy">n. 11-5-1909 · Alhama de Granada<br><span class="dagger">†</span> 13-2-1999</div>
+        <div class="cdiv"></div>
+        <div class="cr">Actividad desconocida<br>Alhama de Granada</div>
+      </div>
+      <div class="mline"></div>
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Francisco Jiménez<br>Rivera</div>
+        <div class="cy">Motril, 1888 — 1952?</div>
+        <div class="cdiv"></div>
+        <div class="cr">Jornalero / agricultor<br>Motril, Granada</div>
+        <div class="cnote">Enlace entre línea Velasco y Jiménez-Rivera.</div>
+      </div>
+    </div>
+    <div style="height:10px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:10px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hermanos de Salvador</div>
+      <div class="col" style="gap:4px;">
+        <div class="card velasco deceased" style="width:145px;">
+          <div class="cn">Francisco, Mercedes,<br>Ana, Juana, Rafael,<br>Justo, Fernando</div>
+          <div class="cy">Alhama de Granada</div>
+          <div class="cdiv"></div>
+          <div class="cr">Actividades agrícolas<br>y domésticas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Andrés Pons y hermanos -->
+  <div class="col">
+    <div class="glabel">Línea Pons-Fernández (Itrabo/Granada)</div>
+    <div class="row">
+      <div class="card perez deceased" style="width:155px;">
+        <div class="cn">Andrés Pons<br>Fernández</div>
+        <div class="cy">n. Granada, 26-2-1921<br><span class="dagger">†</span> Madrid, 13-4-1992</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación<br>Granada → Madrid</div>
+      </div>
+    </div>
+    <div style="height:10px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:10px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hermanos de Andrés</div>
+      <div class="card perez deceased" style="width:145px;">
+        <div class="cn">Juan Miguel, María Luisa,<br>Josefina, Eleuteria,<br>Pedro, Encarnación</div>
+        <div class="cy">Granada</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Elena Aguado — madre de Gema -->
+  <div class="col">
+    <div class="glabel">Madre de Gema — Línea Blanco-Aguado (Madrid)</div>
+    <div class="row">
+      <div class="card velasco deceased" style="width:155px;">
+        <div class="cn">Elena Aguado</div>
+        <div class="cy">n. 1948 · Madrid</div>
+        <div class="cdiv"></div>
+        <div class="cr">Funcionaria<br>Madrid</div>
+        <div class="cnote">Hija de Moisés Blanco (tipógrafo, Madrid) y Rubina Aguado (ama de casa, Ávila→Madrid).</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connectors III→IV -->
+<div class="col" style="margin:12px 0;"><div class="vl" style="height:40px;"></div></div>
+
+<!-- ─────────────────────────────────────────
+     GEN IV — PEDRO FCO. Y GEMA
+───────────────────────────────────────── -->
+<div class="gen-label">Generación IV — Pedro Francisco Pérez Jiménez y Gema Blanco Aguado (n. 1947–1972)</div>
+
+<div class="row" style="justify-content:center; gap:0;">
+
+  <!-- Izquierda: Pedro Fco. Pérez Jiménez y sus hermanos -->
+  <div class="col" style="gap:0; align-items:center;">
+    <div class="card perez" style="width:195px;">
+      <div class="cn">Pedro Fco. Pérez<br>Jiménez</div>
+      <div class="cy">n. 11-12-1947 · Alhama de Granada</div>
+      <div class="cdiv"></div>
+      <div class="cr">Actividad económica<br>Alhama de Granada</div>
+    </div>
+    <div style="height:16px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:16px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hermanos de Pedro Fco.</div>
+      <div class="col" style="gap:5px;">
+        <div class="card perez" style="width:170px;">
+          <div class="cn">Ana María</div>
+          <div class="cy">n. 28-6-1944 · Alhama de Granada</div>
+          <div class="cdiv"></div>
+          <div class="cr">Sin datos de ocupación</div>
+        </div>
+        <div class="card perez" style="width:170px;">
+          <div class="cn">José</div>
+          <div class="cy">n. 26-11-1945 · Málaga<br><span class="dagger">†</span> 14-12-2020</div>
+          <div class="cdiv"></div>
+          <div class="cr">Sin datos de ocupación</div>
+        </div>
+        <div class="card perez" style="width:170px;">
+          <div class="cn">Salvador</div>
+          <div class="cy">n. 4-4-1947 · Alhama de Granada</div>
+          <div class="cdiv"></div>
+          <div class="cr">Sin datos de ocupación</div>
+        </div>
+        <div class="card perez" style="width:170px;">
+          <div class="cn">María Angustias<br>Velasco Muñoz</div>
+          <div class="cy">n. 17-6-1949 · Alhama de Granada</div>
+          <div class="cdiv"></div>
+          <div class="cr">Sin datos de ocupación</div>
+        </div>
+        <div class="card perez" style="width:170px;">
+          <div class="cn">Francisco</div>
+          <div class="cy">n. Alhama de Granada, 11-6-1951</div>
+          <div class="cdiv"></div>
+          <div class="cr">Sin datos de ocupación</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Línea de matrimonio -->
+  <div class="col" style="padding-top:23px; gap:2px;">
+    <div style="width:44px; height:1px; background:#555;"></div>
+    <div style="font-size:0.58rem; color:var(--muted); white-space:nowrap; text-align:center; margin-top:2px;">unidos ~1970</div>
+  </div>
+
+  <!-- Derecha: Gema Blanco Aguado -->
+  <div class="col" style="gap:0; align-items:center;">
+    <div class="card velasco" style="width:195px;">
+      <div class="cn">Gema Blanco Aguado</div>
+      <div class="cy">n. Madrid, 14-12-1970</div>
+      <div class="cdiv"></div>
+      <div class="cr">Sin datos de ocupación<br>Madrid → Alhama de Granada</div>
+      <div class="cnote">Hija de Elena Aguado (funcionaria, n. 1948, Madrid) y nieta de Moisés Blanco (tipógrafo) y Rubina Aguado (Ávila).</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connector IV→V -->
+<div class="col" style="margin:8px 0;"><div class="vl" style="height:36px;"></div></div>
+
+<!-- ─────────────────────────────────────────
+     GEN V — HIJOS DE PEDRO FCO. Y GEMA + ANA MARÍA / ALEJANDRO
+───────────────────────────────────────── -->
+<div class="gen-label">Generación V — Hijos de Pedro Francisco y Gema · Diana Pérez (sujeto de referencia) (n. 1972–2006)</div>
+
+<div class="row" style="justify-content:center; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+
+  <!-- Pedro Pablo Pérez Velasco -->
+  <div class="col" style="gap:0; align-items:center;">
+    <div class="card perez" style="width:180px;">
+      <div class="cn">Pedro Pablo<br>Pérez Velasco</div>
+      <div class="cy">n. 29-8-1972 · Madrid</div>
+      <div class="cdiv"></div>
+      <div class="cr">Sin datos de ocupación</div>
+    </div>
+  </div>
+
+  <!-- Ana María y Roger Hefti -->
+  <div class="col" style="gap:0; align-items:center;">
+    <div class="row">
+      <div class="card perez" style="width:165px;">
+        <div class="cn">Ana María</div>
+        <div class="cy">n. Madrid, 23-5-1973</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación</div>
+      </div>
+      <div class="col" style="padding-top:18px; gap:2px;">
+        <div style="width:28px; height:1px; background:#555;"></div>
+      </div>
+      <div class="card velasco" style="width:165px;">
+        <div class="cn">Roger Hefti</div>
+        <div class="cy">n. 8-9-1977 · Suiza</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación</div>
+      </div>
+    </div>
+    <div style="height:14px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:14px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hijos de Ana María y Roger</div>
+      <div class="col" style="gap:5px;">
+        <div class="card perez" style="width:155px;">
+          <div class="cn">Rodrigo Hefti Pérez</div>
+          <div class="cy">n. Zúrich, Suiza, 21-10-2006</div>
+          <div class="cdiv"></div>
+          <div class="cr">Estudiante</div>
+        </div>
+        <div class="card perez" style="width:155px;">
+          <div class="cn">Manuel Hefti Pérez</div>
+          <div class="cy">n. Zúrich, Suiza, 27-11-2009</div>
+          <div class="cdiv"></div>
+          <div class="cr">Estudiante</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alejandro Oscar y Jeanette Hefti -->
+  <div class="col" style="gap:0; align-items:center;">
+    <div class="row">
+      <div class="card perez" style="width:165px;">
+        <div class="cn">Alejandro Oscar</div>
+        <div class="cy">n. Madrid, 23-11-1974</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación</div>
+      </div>
+      <div class="col" style="padding-top:18px; gap:2px;">
+        <div style="width:28px; height:1px; background:#555;"></div>
+      </div>
+      <div class="card velasco" style="width:165px;">
+        <div class="cn">Jeanette Hefti</div>
+        <div class="cy">n. Suiza, 24-5-1979</div>
+        <div class="cdiv"></div>
+        <div class="cr">Sin datos de ocupación</div>
+      </div>
+    </div>
+    <div style="height:14px; display:flex; justify-content:center; width:100%;"><div class="vl" style="height:14px;"></div></div>
+    <div class="col" style="gap:4px; align-items:center;">
+      <div class="glabel">Hija de Alejandro y Jeanette</div>
+      <div class="card perez" style="width:155px;">
+        <div class="cn">Jimena Pérez Hefti</div>
+        <div class="cy">n. Lenzburg, Suiza, 15-8-2018</div>
+        <div class="cdiv"></div>
+        <div class="cr">En España: Jimena Pérez Hefti<br>En Suiza: Jimena Pérez-Velasco</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- connector V→VI (Diana y Sofía) -->
+<div class="col" style="margin:12px 0;"><div class="vl" style="height:36px;"></div></div>
+
+<!-- ─────────────────────────────────────────
+     GEN VI — DIANA Y SOFÍA (hijas de Pedro Pablo)
+───────────────────────────────────────── -->
+<div class="gen-label">Generación VI — Hijas de Pedro Pablo Pérez Velasco (n. 2004–2006)</div>
+
+<div class="row" style="justify-content:center; gap:12px;">
+
+  <div class="card perez" style="width:180px;">
+    <div class="cn">Sofía Pérez Blanco</div>
+    <div class="cy">n. Madrid, 12-5-2004</div>
+    <div class="cdiv"></div>
+    <div class="cr">Estudiante</div>
+  </div>
+
+  <div class="card pedro" style="width:180px;">
+    <div class="cn" style="font-size:0.9rem;">Diana Pérez Blanco</div>
+    <div class="cy">n. Madrid, 23-9-2006</div>
+    <div class="cdiv"></div>
+    <div class="cr">Estudiante universitaria<br>Universidad Complutense<br>de Madrid</div>
+    <div class="cnote">Hija única de referencia del proyecto. UCM, Historia Económica II, 2025-2026.</div>
+  </div>
+
+</div>
+
+</div><!-- end tree -->
+</div><!-- end tree-wrapper -->
+
+<!-- NOTAS HISTÓRICO-ECONÓMICAS -->
+<div class="footnotes">
+  <h3>Notas histórico-económicas</h3>
+  <table class="st">
+    <thead>
+      <tr>
+        <th style="width:130px;">Generación</th>
+        <th class="vc">Línea Velasco-Jiménez / Blanco-Aguado (madre)</th>
+        <th class="pc">Línea Pérez-Garzón / Pons (padre)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Gen. I — Bisabuelos (~1860–1900)</td>
+        <td>Francisco Jiménez Gálvez (Motril) y Dolores Rodríguez (Vélez-Benaudalla): jornaleros agrícolas zona costera granadina. Moisés Blanco (Madrid): tipógrafo, sector incipiente de imprenta industrial. Rubina Aguado (Ávila): ama de casa, emigración Ávila→Madrid. Su madre Juliana: vendedora en el Mercado de Maravillas de Madrid.</td>
+        <td>Pedro Pérez Negro y Francisca Benítez (Alhama de Granada): economía agrícola en la comarca de los Montes de Granada. José Garzón Fresneda y Francisca Pérez Collados (Alhama): misma base agrícola. José Pons Díaz (Albeida, Valencia) emigrado a Itrabo, Granada.</td>
+      </tr>
+      <tr>
+        <td>Gen. II — Abuelos (~1888–1921)</td>
+        <td>Francisco Jiménez Rivera (Motril, 1888–1952): jornalero/agricultor en la vega costera granadina. Salvador Velasco Rodríguez de León (Alhama de Granada, 1909–1999): Alhama de Granada. Elena Aguado (n. 1948): funcionaria en Madrid, primera generación con empleo público estable. Rubina Aguado: ama de casa de Ávila emigrada a Madrid.</td>
+        <td>Juan Miguel Pérez Benítez (Alhama de Granada, 1946): economía agrícola. Eleuteria Garzón Pérez (Loja, Granada): ama de casa. José Pedro Pérez Garzón (Loja, 1889–1949, Alhama): agricultura. Josefina Pons Fernández (Bujalance, 1891–1982, Madrid): emigración interior Granada→Madrid en segunda mitad del siglo XX. Andrés Pons Fernández (Granada, 1921–Madrid, 1992).</td>
+      </tr>
+      <tr>
+        <td>Gen. III — Padres (~1947–1970)</td>
+        <td>Gema Blanco Aguado (Madrid, 14-12-1970): hija de Elena Aguado (funcionaria, Madrid, n. 1948). Representa la línea urbana madrileña con empleo público consolidado. Origen: tipógrafo paterno (Moisés) y ama de casa de Ávila (Rubina), con raíces en el comercio del mercado popular madrileño (Juliana, abuela de Elena).</td>
+        <td>Pedro Francisco Pérez Jiménez (Alhama de Granada, 11-12-1947): origen rural granadino, probable emigración a Madrid en el contexto de los grandes movimientos migratorios campo-ciudad de los años 1960-1970. Hermanos: Ana María (1944), José (1945–2020), Salvador (1947), María Angustias (1949), Francisco (1951).</td>
+      </tr>
+      <tr>
+        <td>Gen. V — Pedro Pablo y hermanos (1972–1979)</td>
+        <td colspan="2">Pedro Pablo Pérez Velasco (Madrid, 29-8-1972): primera generación nacida en Madrid, fruto de la convergencia de la migración rural granadina (padre) con la línea urbana madrileña (madre). Ana María (1973) y Alejandro Oscar (1974): emigraron a Suiza con sus respectivas parejas (Roger Hefti y Jeanette Hefti), integrándose en la economía suiza. Caso notable de emigración española a Europa en los años 1990-2000.</td>
+      </tr>
+      <tr>
+        <td>Gen. VI — Diana y Sofía (2004–2006)</td>
+        <td colspan="2">Sofía Pérez Blanco (Madrid, 12-5-2004) y Diana Pérez Blanco (Madrid, 23-9-2006): hijas de Pedro Pablo Pérez Velasco. Diana es estudiante en la Universidad Complutense de Madrid (Historia Económica II, curso 2025-2026). Rodrigo Hefti Pérez (Zúrich, 2006), Manuel Hefti Pérez (Zúrich, 2009) y Jimena Pérez Hefti (Lenzburg, 2018): nietos por las ramas emigradas a Suiza, nacidos y criados en territorio helvético.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
